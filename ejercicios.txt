@@ -24,6 +24,20 @@ SELECT calcular_area_circulo(10);
 -- Resultado: 314.1592653589793
 
 --3
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    email TEXT NOT NULL,
+    fecha_registro DATE NOT NULL
+);
+
+INSERT INTO usuarios (nombre, email, fecha_registro) 
+VALUES 
+('Juan Pérez', 'juan.perez@example.com', '2024-01-15'),
+('Ana Gómez', 'ana.gomez@example.com', '2024-02-20'),
+('Luis Fernández', 'luis.fernandez@example.com', '2024-03-10');
+
+
 CREATE OR REPLACE FUNCTION contar_registros(tabla TEXT)
 RETURNS INTEGER AS $$
 DECLARE
@@ -42,8 +56,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 SELECT contar_registros('usuarios');
--- Resultado: (El total de registros en la tabla 'usuarios')
-
 
 --4
 -- Paso 1: Crear la tabla (si no existe)
@@ -63,13 +75,14 @@ INSERT INTO usuarios (id, nombre, correo) VALUES
 
 -- Paso 3: Crear la función
 CREATE OR REPLACE FUNCTION obtener_usuario(user_id INT)
-RETURNS TABLE (nombre VARCHAR(100), correo VARCHAR(100)) AS $$
+RETURNS TABLE (nombre VARCHAR, correo VARCHAR) AS $$
 BEGIN
     RETURN QUERY
-    SELECT nombre, correo
-    FROM usuarios
-    WHERE id = user_id;
-END; $$ LANGUAGE plpgsql;
+    SELECT u.nombre, u.correo
+    FROM usuarios u
+    WHERE u.id = user_id;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Paso 4: Probar la función
 SELECT * FROM obtener_usuario(1);
@@ -93,35 +106,40 @@ SELECT dividir(10, 2);  -- Resultado esperado: 5
 SELECT dividir(10, 0);  -- Resultado esperado: Excepción 'División por cero no permitida'
 
 --6
-CREATE TABLE IF NOT EXISTS pedidos (
-    id INT PRIMARY KEY,
+CREATE TABLE pedidos (
+    id SERIAL PRIMARY KEY,
+    cliente_nombre TEXT NOT NULL,
     estado TEXT NOT NULL
 );
 
-INSERT INTO pedidos (id, estado) VALUES
-(101, 'Pendiente'),
-(102, 'Pendiente'),
-(103, 'Pendiente');
 
-CREATE FUNCTION actualizar_estado_pedido(pedido_id INT, nuevo_estado TEXT)
-RETURNS BOOLEAN
+INSERT INTO pedidos (cliente_nombre, estado) 
+VALUES 
+('Juan Pérez', 'Pendiente'),
+('Ana Gómez', 'Procesando'),
+('Luis Fernández', 'Pendiente');
+
+
+CREATE OR REPLACE FUNCTION actualizar_estado_pedido(pedido_id INT, nuevo_estado TEXT)
+RETURNS VOID AS $$
 BEGIN
     UPDATE pedidos
     SET estado = nuevo_estado
     WHERE id = pedido_id;
-
-    RETURN TRUE;  -- Retorna TRUE si se realizó la actualización
 END;
+$$ LANGUAGE plpgsql;
 
-SELECT actualizar_estado_pedido(101, 'Enviado');
+SELECT actualizar_estado_pedido(1, 'Enviado');
 
-SELECT * FROM pedidos WHERE id = 101;
+SELECT * FROM pedidos WHERE id = 1;
 
 --7
+DROP TABLE IF EXISTS pedidos;
+
 CREATE TABLE pedidos (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    cliente_id INT,
-    total DECIMAL(10, 2)
+    id SERIAL PRIMARY KEY,
+    cliente_id INT NOT NULL,
+    total NUMERIC(10, 2) NOT NULL
 );
 
 INSERT INTO pedidos (cliente_id, total) VALUES
@@ -130,23 +148,21 @@ INSERT INTO pedidos (cliente_id, total) VALUES
 (3, 200.00),
 (4, 175.25);
 
-DELIMITER //
-
-CREATE FUNCTION obtener_pedido_mayor_total()
-RETURNS TABLE (id INT, cliente_id INT, total DECIMAL(10, 2))
+CREATE OR REPLACE FUNCTION obtener_pedido_mayor_total()
+RETURNS TABLE(pedido_id INT, cliente_id INT, total NUMERIC) AS $$
 BEGIN
-    RETURN (
-        SELECT id, cliente_id, total
-        FROM pedidos
-        ORDER BY total DESC
-        LIMIT 1
-    );
-END //
-
-DELIMITER ;
+    RETURN QUERY
+    SELECT p.id, p.cliente_id, p.total
+    FROM pedidos p
+    ORDER BY p.total DESC
+    LIMIT 1;
+END;
+$$ LANGUAGE plpgsql;
 
 
 SELECT * FROM obtener_pedido_mayor_total();
+
+SELECT * FROM pedidos;
 
 --8
 CREATE FUNCTION calcular_area_rectangulo(ancho INT DEFAULT 1, alto INT DEFAULT 1)
